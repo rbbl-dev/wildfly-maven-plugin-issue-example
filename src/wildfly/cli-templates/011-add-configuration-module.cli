@@ -1,0 +1,4 @@
+module add \
+    --name=cc.rbbl.configuration \
+    --resource-delimiter=; \
+    --resources=${project.basedir}/src/wildfly/modules/configuration/common;${project.basedir}/src/wildfly/modules/configuration/stage

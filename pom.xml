@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>cc.rbbl</groupId>
+    <artifactId>wildfly-maven-plugin-issue-example</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <properties>
+        <version.wildfly>30.0.1.Final</version.wildfly>
+        <plugin.galleon.version>5.2.2.Final</plugin.galleon.version>
+        <plugin.wildfly-maven.version>4.2.2.Final</plugin.wildfly-maven.version>
+    </properties>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>3.2.0</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
+        <resources>
+            <resource>
+                <directory>src/wildfly/cli-templates</directory>
+                <includes>
+                    <include>*.cli</include>
+                </includes>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+
+        <!-- give Wildfly build directory a better name -->
+        <finalName>webservice</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>resources</goal>
+                        </goals>
+                        <phase>generate-resources</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- always clean Wildfly build directory to remove old configuration -->
+            <plugin>
+                <artifactId>maven-clean-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>clean-assembly</id>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                        <phase>prepare-package</phase>
+                        <configuration>
+                            <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                            <filesets>
+                                <fileset>
+                                    <directory>target/${project.build.finalName}/wildfly-${version.wildfly}</directory>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </fileset>
+                            </filesets>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- prepare Wildfly using Galleon -->
+            <plugin>
+                <groupId>org.jboss.galleon</groupId>
+                <artifactId>galleon-maven-plugin</artifactId>
+                <version>${plugin.galleon.version}</version>
+                <configuration>
+                    <installDir>${project.build.directory}/${project.build.finalName}/wildfly-${version.wildfly}</installDir>
+                    <!-- show Galleon build time -->
+                    <logTime>true</logTime>
+                    <!-- allow downloads from Maven repository -->
+                    <offline>false</offline>
+                    <featurePacks>
+                        <featurePack>
+                            <location>org.wildfly:wildfly-galleon-pack:${version.wildfly}</location>
+                            <!-- must be set to false for Galleon feature pack provisioning using layers below -->
+                            <inheritPackages>false</inheritPackages>
+                            <!-- must be set to false to get configuration adapted to selected layers below -->
+                            <inheritConfigs>false</inheritConfigs>
+                        </featurePack>
+                    </featurePacks>
+                    <configurations>
+                        <configs>
+                            <model>standalone</model>
+                            <name>standalone.xml</name>
+                            <layers>
+                                <layer>jaxrs-server</layer>
+                            </layers>
+                        </configs>
+                    </configurations>
+                    <pluginOptions>
+                        <jboss-fork-embedded>true</jboss-fork-embedded>
+                        <optional-packages>passive+</optional-packages>
+                    </pluginOptions>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>server-provisioning</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>provision</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- configure Wildfly -->
+            <plugin>
+                <groupId>org.wildfly.plugins</groupId>
+                <artifactId>wildfly-maven-plugin</artifactId>
+                <version>${plugin.wildfly-maven.version}</version>
+                <executions>
+                    <execution>
+                        <id>configure-wildfly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>start</goal>
+                            <goal>execute-commands</goal>
+                            <goal>shutdown</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <offline>false</offline>
+                    <scripts>
+                        <script>${project.build.outputDirectory}/011-add-configuration-module.cli</script>
+                    </scripts>
+                    <jboss-home>${project.build.directory}/${project.build.finalName}/wildfly-${version.wildfly}</jboss-home>
+                    <port>9990</port>
+                    <!-- java opts which CLI is started with -->
+                    <java-opts>-Xmx256m</java-opts>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
