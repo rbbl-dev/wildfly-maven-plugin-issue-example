@@ -10,7 +10,7 @@
     <properties>
         <version.wildfly>30.0.1.Final</version.wildfly>
         <plugin.galleon.version>5.2.2.Final</plugin.galleon.version>
-        <plugin.wildfly-maven.version>4.2.2.Final</plugin.wildfly-maven.version>
+        <plugin.wildfly-maven.version>3.0.0.Final</plugin.wildfly-maven.version>
     </properties>
 
     <build>
